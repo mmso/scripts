@@ -16,6 +16,6 @@ for i in {4..6}; {
 			echo -en "\u2$i$is$iis";
 		}
 
-		echo "\n";
+		echo;
 	}
 }
