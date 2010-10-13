@@ -1,0 +1,21 @@
+#!/bin/zsh
+
+typeset -i i=0;
+typeset -i 16 ix=0;
+typeset -i 16 iix=0;
+
+for i in {4..6}; {
+	for ix in {0..15}; {
+		is=$(echo -n $ix | sed "s/16#//");
+
+		echo -n "$i$is{0..F}: ";
+
+		for iix in {0..15}; { 
+			iis=$(echo -n $iix | sed "s/16#//");
+
+			echo -en "\u2$i$is$iis";
+		}
+
+		echo "\n";
+	}
+}
