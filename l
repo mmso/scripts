@@ -1,331 +1,307 @@
 #!/usr/bin/perl
 
 use strict;
+no strict "refs";
 use warnings;
-use open qw/:std :utf8/;
-use utf8;
 
-# 256-color terminal
-my $color256 = 1; # extended colors disabled, 1 to enable
-# colorschemes
-#my $colorscheme = ''; #
-#my $colorscheme = 'greyscale'; #
-my $colorscheme = 'early'; #
+# ls specific
+my $ls_bin	=	'/bin/ls';
+my $ls_args	=	'-hAl --group-directories-first --color=always ' .
+				'--time=ctime --time-style=+%s';
 
-# special padding if 256-colors or normal
-my $paddingsz = 15;
+# options
+my %view_map = (
+	"--pf"		=> "perm_file",
+	"--psf"		=> "perm_size_file",
+	"--ptsf"	=> "perm_time_size_file",
+	"--tpf"		=> "time_perm_file",
+	"--tpsf"	=> "time_perm_size_file",
+);
 
-## default colors
-my @c;
-$c[0]  = "\e[30  m";	# black
-$c[1]  = "\e[30;1m";	# bright black
-## size: K
-$c[2]  = "\e[31  m";	# red
-## size: G, rel: sek
-$c[3]  = "\e[31;1m";	# bright red
-## rel: day
-$c[4]  = "\e[32  m";	# green
-## perm: x
-$c[5]  = "\e[32;1m";	# bright green
-## perm: r
-$c[6]  = "\e[33  m";    # yellow 
-## size: M, perm: w
-$c[7]  = "\e[33;1m";	# bright yellow
-## perm: other
-$c[8]  = "\e[34  m";    # blue
-## rel: hour
-$c[9]  = "\e[34;1m";	# bright blue
-$c[10] = "\e[35  m";	# magenta
-## perm: s
-$c[11] = "\e[35;1m";	# bright magenta
-$c[12] = "\e[36  m";	# cyan
-## perm: l
-$c[13] = "\e[36;1m";	# bright cyan
-## size: B, delim: a, rel: month
-$c[14] = "\e[37  m";	# white
-## rel: min
-$c[15] = "\e[33;1m";	# 
-$c[16] = "\e[0m";		# default
-$c[17] = "\e[1m";		# bold
+my (@c, @d, $view, $padding);
 
-# extended colors
-if($color256 == 1) {
-	$paddingsz = 21;
+if (!(exists($ENV{DISPLAY})) and ($ENV{TERM} =~ m/^linux/)) {
+	# delimiters
+	@d = ('|', '-', ' ', '|');
 
-	if($colorscheme eq '') {
-		$c[0]  = "\e[38;5;208  m";
-		$c[1]  = "\e[38;5;197  m";
-		$c[2]  = "\e[38;5;190  m";
-		$c[3]  = "\e[38;5;196;1m";
-		$c[4]  = "\e[38;5;242  m";
-		$c[5]  = "\e[38;5;209  m";
-		$c[6]  = "\e[38;5;185  m";
-		$c[7]  = "\e[38;5;215  m";
-		$c[8]  = "\e[38;5;032  m";
-		$c[9]  = "\e[38;5;061  m";
-		$c[10] = "\e[38;5;142  m";
-		$c[11] = "\e[38;5;197;1m";
-		$c[12] = "\e[38;5;106  m";
-		$c[13] = "\e[38;5;060;1m";
-		$c[14] = "\e[38;5;236  m";
-		$c[15] = "\e[38;5;215  m";
-	}
+	# colortheme
+	@c = (
+		33, # delimiter, month
+		31, # minute
+		32, #
+		33, # hour
+		34, # sec
+		35, # day
+		36, #
+		37, # perms, size
+	);
 
-	if($colorscheme eq 'greyscale') {
-		$c[0]  = "\e[38;5;252  m";
-		$c[1]  = "\e[38;5;251  m";
-		$c[2]  = "\e[38;5;250  m";
-		$c[3]  = "\e[38;5;249;1m";
-		$c[4]  = "\e[38;5;239  m";
-		$c[5]  = "\e[38;5;244;1m";
-		$c[6]  = "\e[38;5;240  m";
-		$c[7]  = "\e[38;5;242  m";
-		$c[8]  = "\e[38;5;244  m";
-		$c[9]  = "\e[38;5;244  m";
-		$c[10] = "\e[38;5;243  m";
-		$c[11] = "\e[38;5;241  m";
-		$c[12] = "\e[38;5;240  m";
-		$c[13] = "\e[38;5;239  m";
-		$c[14] = "\e[38;5;236  m";
-		$c[15] = "\e[38;5;242  m";
-	}
+	# push bold and set normal weight
+	map {
+		$_ = "\e[$_";
+		push(@c, "$_;01m");
+		$_ = $_ . ';22m'
+	} @c;
 
-	if($colorscheme eq 'early') {
-		$c[0]  = "\e[38;5;233  m";
-		$c[1]  = "\e[38;5;245  m";
-		$c[2]  = "\e[38;5;250  m";
-		$c[3]  = "\e[38;5;201  m";
-		$c[4]  = "\e[38;5;239  m";
-		$c[5]  = "\e[38;5;214  m";
-		$c[6]  = "\e[38;5;220  m";
-		$c[7]  = "\e[38;5;166  m";
-		$c[8]  = "\e[38;5;244  m";
-		$c[9]  = "\e[38;5;254  m";
-		$c[10] = "\e[38;5;243  m";
-		$c[11] = "\e[38;5;241  m";
-		$c[12] = "\e[38;5;240  m";
-		$c[13] = "\e[38;5;239  m";
-		$c[14] = "\e[38;5;237  m";
-		$c[15] = "\e[38;5;220  m";
-	}
+	# colorize delimiters
+	map {
+		$_ = $c[0] . $_
+	} @d;
+
+	# default padding and view
+	$padding = 30;
+	$view = $view_map{'--tpf'};
+}
+else {
+	# delimiters
+	@d = qw(▕ - │ ▏);
+
+	# colortheme
+	@c = (
+		237, # delimiter, month
+		196, # minute
+		240, #
+		208, # hour
+		075, # sec
+		240, # day
+		185, #
+		255, # perms, size
+	);
+
+	# push bold and set normal weight
+	map {
+		$_ = "\e[38;5;$_";
+		push(@c, "$_;01m");
+		$_ = $_ . ';22m'
+	} @c;
+
+	# colorize delimiters
+	map {
+		$_ = $c[0] . $_
+	} @d;
+
+	# default padding and view
+	$padding = 38;
+	$view = $view_map{'--ptsf'};
 }
 
+# for every element in argv, unset if an argument for this script
+map {
+	if ($view_map{$_}) {
+		$view = $view_map{$_};
+		$_ = "";
+	}
+} @ARGV;
 
-## default delimiters
-my @d;
-#$d[0] = "├";
-$d[0] = "▕";
-$d[1] = "-";
-#$d[2] = "▕▏";
-$d[2] = "│";
-#$d[3] = "┤";
-$d[3] = "▏";
+my($perm, $hlink, $user, $group, $size, $seconds, $file, $rel);
 
-## set same color on all delims
-for(@d) {
-	$_ = "$c[14]$_$c[16]";
-}
+open(my $ls, '-|', "$ls_bin $ls_args @ARGV")
+	or die("Cant open $ls_bin: $!");
 
-# gets current time for relative time calculation
-my $curtime = time();
+while(my $line = <$ls>) {
+	next if $line =~ /^total/;
 
-## expects following:
-##	-rw-r--r-- 1 user group 32K 1280000000 name
-open(LS, "ls -hvAl --group-directories-first --color=always --time=ctime --time-style=+%s @ARGV|") or die "fst";
+	($perm, $hlink, $user, $group, $size, $seconds) = split(/\s+/, $line)
+		unless $line =~ /^\s/;
 
-## strip first row 
-##	total 32K
-$_ = <LS>;
+	($file) = $line =~ m/.* \d{6,}? (.+)/;
 
-while(<LS>) {
-	## split some strings
-	my ($perm, $hlink, $user, $group, $size, $seconds) = split(/\s+/);
+	next if !$file;
 
-	## parse filename separetly to allow for whitespace etc.
-	my ($file) = m/.* \d{6,}? (.*)/;
+	# calculate relative time
+	$rel = relative_time(time(), $seconds);
 
-	## calculate relative time
-	my ($rel) = relative($curtime, $seconds);
-
-	## color size
+	# colorize size
 	$size = size($size);
 
-	## color permissions
+	# colorize permissions
 	$perm = perm($perm);
 
-	## views
-	#perm_file($perm, $file);
-	#perm_size_file($perm, $size, $file);
-	#time_perm_file($perm, $rel, $file);
-	#time_perm_size_file($perm, $rel, $size, $file);
-	perm_time_size_file($perm, $rel, $size, $file);
-	#left_file($file, $size, 50);
-	#right_file($size, $file, 50);
+	# print it
+	&{$view}($perm, $rel, $size, $file);
 }
 
-close LS;
+close $ls;
 
-## view: permissions and filename
-## | <perm> | <filename>
-sub perm_file{
-	my ($perm, $file) = @_;
-	printf("%s%s%s%s\n", $d[0], $perm, $d[3], $file);
-}
-
-## view: permissions, size and filename
-## | <perm> | <size> | <filename>
-sub perm_size_file{
-	my ($perm, $size, $file) = @_;
-	printf("%s%s%s%-19s%s%s\n", $d[0], $perm, $d[3], $size, $d[2], $file);
-}
-
-## view: permissions, time, size and filename
-## <time> | <perm> | <filename>
-sub time_perm_file{
-	my ($perm, $rel, $file) = @_;
-	printf("%s%s%s%s%s\n", $rel, $d[0], $perm, $d[3], $file);
-}
-
-## view: time, permissions, size and filename
-## <time> | <perm> | <size> | <filename>
-sub time_perm_size_file{
+# view: permissions and filename
+# | <perm> | <filename>
+sub perm_file {
 	my ($perm, $rel, $size, $file) = @_;
-	printf("%s%s%s%s%-${paddingsz}s%s%s\n", $rel, $d[0], $perm, $d[3], $size, $d[2], $file);
+
+	printf("%s%s%s%s\n",
+		$d[0],
+		$perm,
+		$d[3],
+		$file
+	);
 }
 
-## view: permissions, time, size and filename
-## | <perm> | <size> | <filename>
-sub perm_time_size_file{
+# view: permissions, size and filename
+# | <perm> | <size> | <filename>
+sub perm_size_file {
 	my ($perm, $rel, $size, $file) = @_;
-	printf("%s%s%s%s%s%-${paddingsz}s%s%s\n", $d[0], $perm, $d[3], $rel, $d[2], $size, $d[2], $file);
+
+	printf("%s%s%s%s%s%s\n",
+		$d[0],
+		$perm,
+		$d[3],
+		$size,
+		$d[2],
+		$file
+	);
 }
 
-## view: file to the right
-## <var> | <filename>
-sub right_file{
-	my ($var, $file, $paddingright) = @_;
-	printf("%${paddingright}s%s%s\n", $var, $d[2], $file);
+# view: permissions, time, size and filename
+# <time> | <perm> | <filename>
+sub time_perm_file {
+	my ($perm, $rel, $size, $file) = @_;
+
+	printf("%s%s%s%s%s\n",
+		$rel,
+		$d[0],
+		$perm,
+		$d[3],
+		$file
+	);
 }
 
-## view: file to the left
-## <...filename> | <var>
-sub left_file{
-	my ($file, $size, $paddingleft) = @_;
+# view: permissions, time, size and filename
+# | <perm> | <size> | <filename>
+sub perm_time_size_file {
+	my ($perm, $rel, $size, $file) = @_;
 
-	## first row has a \e[0m
-	$file =~ s/^\e\[0m//g;
-
-	my ($esclen, $strlen) = (0, length($file));
-
-	## for each escape sequence, pad the length of it
-	while($file =~ m/\e\[(.*?m)/g) {
-		$esclen += length($1);
-	}
-
-	## special symlink
-	if($file =~ s/->/▻/) {
-		$esclen += 5;
-	}
-
-	my $padlen = $paddingleft - $strlen + $esclen;
-
-	## cut too long filenames
-	if($padlen < 0) {
-		$file = substr($file, 0, $padlen-7);
-		$padlen = 0;
-		$file = $file . "...\e[0m";
-	}
-
-	# pad with spaces
-	#$file = $file . ( ' ' x $padlen);
-	$file = ( ' ' x $padlen) . $file;
-
-	printf("%s%s%s\n", $file, $d[2], $size);
+	printf("%s %s%s%s%s%s%s%s\n",
+		$d[0],
+		$perm,
+		$d[3],
+		$rel,
+		$d[2],
+		$size,
+		$d[2],
+		$file,
+	);
 }
 
-## colorizes permissions
+# view: time, permissions, size and filename
+# <time> | <perm> | <size> | <filename>
+sub time_perm_size_file {
+	my ($perm, $rel, $size, $file) = @_;
+
+	printf("%s%s%s%s%s%s%s\n",
+		$rel,
+		$d[0],
+		$perm,
+		$d[3],
+		$size,
+		$d[2],
+		$file
+	);
+}
+
+# colorizes permissions
 sub perm {
 	my ($perm) = @_;
 
 	$perm =~ s/-/$d[1]/g;
-	$perm =~ s/(r)/$c[6]$1$c[16]/g;
-	$perm =~ s/(w)/$c[7]$1$c[16]/g;
-	$perm =~ s/(x)/$c[5]$1$c[16]/g;
-	$perm =~ s/(d)/$c[8]$1$c[16]/g;
-	$perm =~ s/(l)/$c[13]$1$c[16]/g;
-	$perm =~ s/(s)/$c[11]$1$c[16]/g;
-	$perm =~ s/(S)/$c[8]$1$c[16]/g;
-	$perm =~ s/(t)/$c[8]$1$c[16]/g;
-	$perm =~ s/(T)/$c[8]$1$c[16]/g;
+	$perm =~ s/(r)/$c[7] . $1/eg;
+	$perm =~ s/(w)/$c[7] . $1/eg;
+	$perm =~ s/(x)/$c[7] . $1/eg;
+
+	$perm =~ s/(d)/$c[15] . $1/eg;
+	$perm =~ s/(l)/$c[15] . $1/eg;
+	$perm =~ s/(s)/$c[7] . $1/eg;
+	$perm =~ s/(S)/$c[7] . $1/eg;
+	$perm =~ s/(t)/$c[7] . $1/eg;
+	$perm =~ s/(T)/$c[7] . $1/eg;
 
 	return $perm;
 }
 
-## colors the size string depending on whether its K, M, G or prefixless
+sub size_format {
+	my ($string, $unit) = @_;
+
+	return sprintf("% ${padding}s ", $string . $unit)
+}
+
 sub size {
 	my ($size) = @_;
 
-	return $size if ($size =~ s/(.*)(K)/$c[2]$1$2$c[16]/);
-	return $size if ($size =~ s/(.*)(M)/$c[7]$1$2$c[16]/);
-	return $size if ($size =~ s/(.*)(G)/$c[3]$1$2$c[16]/);
-	return $size if ($size =~ s/(\d+)/$c[14]$1$c[16]/);
+	return size_format($c[7] . $1, $c[15] . $2)
+	if $size =~ m/^(\S+)(K)/;
+
+	return size_format($c[7] . $1, $c[15] . $2)
+	if $size =~ m/^(\S+)(M)/;
+
+	return size_format($c[7] . $1, $c[15] . $2)
+	if $size =~ m/^(\S+)(G)/;
+
+	return size_format($c[7] . $1, $c[15] . 'B')
+	if $size =~ m/^(\d+)/;
+
+	return $size;
 }
 
-## calculates relative time from the current time in seconds
-sub relative {
-	my ($cur, $sec) = @_;
-	my $delta = $cur - $sec;
-	my ($unit, $ret);
+sub relative_time_format {
+	my ($color, $string, $unit) = @_;
 
-	## 0 < sec < 60
-	$unit = "sek";
+	return sprintf("%s%-3s%-3s", $color, $string, $unit);
+}
+
+sub relative_time {
+	my ($cur, $sec) = @_;
+	my ($delta, $unit, $ret);
+
+	$delta = $cur - $sec;
+
+	# 0 < sec < 60
+	$unit = "sec ";
 	$ret = $delta;
 
-	return relativef($c[3], "<", $unit)		if $delta < 10;
-	return relativef($c[3], $ret, $unit)	if $delta < 60;
+	return relative_time_format($c[12], "<", $unit)
+	if $delta < 10;
+	return relative_time_format($c[12], $ret, $unit)
+	if $delta < 60;
 
-	## 1 < min < 45
-	$unit = "min";
+	# 1 < min < 45
+	$unit = "min ";
 	$ret = int($ret/60);
 
-	return relativef($c[15], "<", $unit)		if $delta < 2 * 60;
-	return relativef($c[15], $ret, $unit)	if $delta < 45 * 60;
+	return relative_time_format($c[9], "<", $unit)
+	if $delta < 2 * 60;
+	return relative_time_format($c[9], $ret, $unit)
+	if $delta < 45 * 60;
 
-	## 0.75 < hour < 42
-	$unit = "tim";
+	# 0.75 < hour < 42
+	$unit = "hour";
 	$ret = int($ret/60);
 
-	return relativef($c[9], "<", $unit)		if $delta < 90 * 60;
-	return relativef($c[9], $ret, $unit)	if $delta < 24 * 60 * 60;
-	return relativef($c[9], $ret, $unit)	if $delta < 30 * 60 * 60;
-	return relativef($c[9], $ret, $unit)	if $delta < 36 * 60 * 60;
+	return relative_time_format($c[11], "<", $unit)
+	if $delta < 90 * 60;
+	return relative_time_format($c[11], $ret, $unit)
+	if $delta < 36 * 60 * 60;
+	# < bold
 
-	## 0.75 < day < 30
-	$unit = "dag";
+	# 0.75 < day < 30
+	$unit = "day ";
 	$ret = int($ret/24);
 
-	return relativef($c[4], "<", $unit)		if $delta < 48 * 60 * 60;
-	return relativef($c[4], $ret, $unit)	if $delta < 7 * 24 * 60 * 60;
-	return relativef($c[4], $ret, $unit)	if $delta < 14 * 24 * 60 * 60;
-	return relativef($c[4], $ret, $unit)	if $delta < 28 * 24 * 60 * 60;
-	return relativef($c[4], $ret, $unit)	if $delta < 30 * 24 * 60 * 60;
+	return relative_time_format($c[5], "<", $unit)
+	if $delta < 48 * 60 * 60;
+	return relative_time_format($c[5], $ret, $unit)
+	if $delta < 30 * 24 * 60 * 60;
 
-	## 1 < month < 12
-	$unit = "mån";
+	# 1 < month < 12
+	$unit = "mon ";
 	$ret = int($ret/30);
 
-	return relativef($c[14], "<", $unit)		if $delta < 2 * 30 * 24 * 60 * 60;
-	return relativef($c[14], $ret, $unit)	if $delta < 12 * 30 * 24 * 60 * 60;
+	return relative_time_format($c[0], "<", $unit)
+	if $delta < 2 * 30 * 24 * 60 * 60;
+	return relative_time_format($c[0], $ret, $unit)
+	if $delta < 12 * 30 * 24 * 60 * 60;
 
-	## 1 < years < inf
-	$unit = "år ";
+	# 1 < years < inf
+	$unit = "year";
 	$ret = int($ret/12);
 
-	return relativef($c[0], $ret, $unit);
-}
-
-## format for relative time
-sub relativef {
-	my ($color, $string, $unit) = @_;
-	return sprintf("%s%-2s%s%-3s%s", $color, $string, $c[17], $unit, $c[16]);
+	return relative_time_format($c[0], $ret, $unit);
 }

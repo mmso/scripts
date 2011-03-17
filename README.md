@@ -1,3 +1,14 @@
-l colorizes your ls output and calculates relative time.
+# Collection of scripts
 
-![screenshot](http://github.com/mmso/scripts/raw/master/l-screenshot.png)
+* l colorizes your ls output and calculates relative time.
+A simple perl script which doesn't rely on any libraries. Can alternate views with:
+
+    --pf    permissions, file
+    --psf   permissions, size, file
+    --tpf   time, permissions, file
+    --tpsf  time, permissions, size, file (default)
+    --ptsf  permissions, time, size, file
+
+An improved version of the script by Magnus Woldrich can be found here: __ls++__ <https://github.com/trapd00r/ls-->
+
+* unicode lists some special characters, mostly for testing the terminal
