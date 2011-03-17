@@ -1,14 +1,16 @@
 # Collection of scripts
 
-* l colorizes your ls output and calculates relative time.
-A simple perl script which doesn't rely on any libraries. Can alternate views with:
+*   __l colorizes your ls output and calculates relative time.__
 
-    --pf    permissions, file
-    --psf   permissions, size, file
-    --tpf   time, permissions, file
-    --tpsf  time, permissions, size, file (default)
-    --ptsf  permissions, time, size, file
+    A simple perl script which doesn't rely on any libraries. Can alternate views with:
 
-An improved version of the script by Magnus Woldrich can be found here: __ls++__ <https://github.com/trapd00r/ls-->
+        --pf    permissions, file
+        --psf   permissions, size, file
+        --tpf   time, permissions, file
+        --tpsf  time, permissions, size, file (default)
+        --ptsf  permissions, time, size, file
 
-* unicode lists some special characters, mostly for testing the terminal
+    An improved version of the script by Magnus Woldrich can be found here:
+    __ls++__ <https://github.com/trapd00r/ls-->
+
+* __unicode lists some special characters, mostly for testing the terminal__
