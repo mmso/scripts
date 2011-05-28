@@ -6,7 +6,7 @@ use warnings;
 
 # ls specific
 my $ls_bin	=	'/bin/ls';
-my $ls_args	=	'-hAl --group-directories-first --color=always ' .
+my $ls_args	=	'-hl --group-directories-first --color=always ' .
 				'--time=ctime --time-style=+%s';
 
 # options
@@ -16,6 +16,8 @@ my %view_map = (
 	"--ptsf"	=> "perm_time_size_file",
 	"--tpf"		=> "time_perm_file",
 	"--tpsf"	=> "time_perm_size_file",
+	"--tsf"		=> "time_size_file",
+	"--tf"		=> "time_file",
 );
 
 my (@c, @d, $view, $padding);
@@ -54,18 +56,31 @@ if (!(exists($ENV{DISPLAY})) and ($ENV{TERM} =~ m/^linux/)) {
 }
 else {
 	# delimiters
-	@d = qw(▕ - │ ▏);
+	@d = ('▕', '-', '│', '▏');
+	#@d = (' ', ' ', ' ', ' ');
 
-	# colortheme
+	# dark terminal
+	#@c = (
+		#237, # delimiter, month
+		#196, # minute
+		#240, #
+		#208, # hour
+		#075, # sec
+		#240, # day
+		#185, #
+		#255, # perms, size
+	#)
+
+	# bright terminal
 	@c = (
-		237, # delimiter, month
-		196, # minute
+		8, # delimiter, month
+		1, # minute
 		240, #
-		208, # hour
-		075, # sec
+		8, # hour
+		1, # sec
 		240, # day
-		185, #
-		255, # perms, size
+		8, #
+		0, # perms, size
 	);
 
 	# push bold and set normal weight
@@ -82,7 +97,7 @@ else {
 
 	# default padding and view
 	$padding = 38;
-	$view = $view_map{'--ptsf'};
+	$view = $view_map{'--tf'};
 }
 
 # for every element in argv, unset if an argument for this script
@@ -198,7 +213,35 @@ sub time_perm_size_file {
 	);
 }
 
-# colorizes permissions
+
+# view: time, size and filename
+# <time> | <size> | <filename>
+sub time_size_file {
+	my ($perm, $rel, $size, $file) = @_;
+
+	printf("%s%s%s%s%s\n",
+		$rel,
+		$d[0],
+		$size,
+		$d[2],
+		$file
+	);
+}
+
+
+# view: time and filename
+# <time> | <filename>
+sub time_file {
+	my ($perm, $rel, $size, $file) = @_;
+
+	printf("%s%s %s\n",
+		$rel,
+		$d[0],
+		$file
+	);
+}
+
+# colorize permissions
 sub perm {
 	my ($perm) = @_;
 
@@ -217,12 +260,14 @@ sub perm {
 	return $perm;
 }
 
+# size format
 sub size_format {
 	my ($string, $unit) = @_;
 
 	return sprintf("% ${padding}s ", $string . $unit)
 }
 
+# colorize size
 sub size {
 	my ($size) = @_;
 
@@ -241,12 +286,14 @@ sub size {
 	return $size;
 }
 
+# time format
 sub relative_time_format {
 	my ($color, $string, $unit) = @_;
 
 	return sprintf("%s%-3s%-3s", $color, $string, $unit);
 }
 
+# colorize time
 sub relative_time {
 	my ($cur, $sec) = @_;
 	my ($delta, $unit, $ret);
@@ -294,9 +341,9 @@ sub relative_time {
 	$unit = "mon ";
 	$ret = int($ret/30);
 
-	return relative_time_format($c[0], "<", $unit)
+	return relative_time_format($c[5], "<", $unit)
 	if $delta < 2 * 30 * 24 * 60 * 60;
-	return relative_time_format($c[0], $ret, $unit)
+	return relative_time_format($c[5], $ret, $unit)
 	if $delta < 12 * 30 * 24 * 60 * 60;
 
 	# 1 < years < inf
