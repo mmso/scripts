@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# running from other dir
+path=$(dirname $0)
+
+# configuration
+source $path/bar.conf
+
+# calculate position and run
+for file in $path/scripts.d/*; do
+	a=$(basename $file)
+	i=${a%-*}; w=${a#*-}
+
+	(( mx -= $w - $padding * $i ))
+
+	echo "$path/scripts.d/$a"
+	$file $mx $w $path &
+done

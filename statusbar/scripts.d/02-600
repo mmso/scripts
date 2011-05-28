@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# unload arguments
+bx=$1; bw=$2; p=$3
+
+# configuration
+source $p/bar.conf
+
+while :; do
+	mpc=$(mpc)
+	artist=$(echo "$mpc" | head -1 | sed 's/\(.*\) - \(.*\)/\1/')
+	song=$(echo "$mpc" | head -1 | sed 's/\(.*\) - \(.*\)/\2/')
+	percent=$(echo "$mpc" | tail -2 | head -n 1 | awk '{print $4}' | sed 's/(\(.*\)%)/\1/')
+	chk=$(echo "$mpc" | cut -c 1-6)
+
+	if [[ $chk = volume ]]; then
+		artist="nil"
+		song="nil"
+	fi
+
+	echo -n "^ca(1,mpc toggle)$artist / $song^ca() "
+	echo "$(echo $percent | gdbar -s h -ss $ss -sw $sv -fg $gdbarfg -bg $gdbarbg -h $gdhorizontalh -w $gdhorizontalw)"
+
+	sleep $sleep
+done | dzen2 -x $bx -y $my -w $bw -h $mh -fg "$foreground" -bg "$background" -fn "$font" -ta r

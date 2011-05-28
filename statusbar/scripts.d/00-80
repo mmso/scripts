@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# unload arguments
+bx=$1; bw=$2; p=$3
+
+# configuration
+source $p/bar.conf
+
+while :; do
+	date=`date +"%d/%m %R"`
+	echo $date
+	sleep $sleep
+done | dzen2 -x $bx -y $my -w $bw -h $mh -fg "$foreground" -bg "$background" -fn "$font" -ta c

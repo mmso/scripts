@@ -1,0 +1,36 @@
+#!/bin/bash
+
+# unload arguments
+bx=$1; bw=$2; p=$3
+
+# configuration
+source $p/bar.conf
+
+sp='Speakers'
+hp='Headphones'
+
+vU="amixer -c0 -q set Master 1dB+ > /dev/null"
+vD="amixer -c0 -q set Master 1dB- > /dev/null"
+
+dB="dB"
+
+while :; do
+	master=$(amixer get Master)
+	percent=$(echo "$master" | tail -1 | awk '{print $5}' | sed 's/\[\(.*\)%\]/\1/')
+	decibel=$(echo "$master" | tail -1 | awk '{print $6}' | sed 's/\[\(.*\)\.\(.*\)\]/\1/')
+
+	analog=$(amixer get 'Analog Output')
+	output=$(echo "$analog" | tail -1 | awk '{print $2}' | sed "s/'\(.*\)'/\1/")
+
+    if [[ $output = $hp ]]; then
+		cmd="amixer set 'Analog Output' '$sp'"
+	else
+		cmd="amixer set 'Analog Output' '$hp'"
+    fi
+
+	#echo -n "^ca(1,$cmd)^fn($bfont)$output^ca()^fn($font)    "
+	echo -n "$decibel$dB "
+	echo "$(echo $percent | gdbar -s h -ss $ss -sw $sv -fg $gdbarfg -bg $gdbarbg -h $gdhorizontalh -w $gdhorizontalw)"
+
+	sleep $sleep
+done | dzen2 -e "button4=exec:$vu;button5=exec:$vd" -x $bx -y $my -w $bw -h $mh -fg "$foreground" -bg "$background" -fn "$font" -ta c

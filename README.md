@@ -14,3 +14,7 @@
     __ls++__ <https://github.com/trapd00r/ls-->
 
 * __unicode lists some special characters, mostly for testing the terminal__
+
+* __status bar__
+	
+	Small status bar handler and scripts using dzen
