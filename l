@@ -108,35 +108,41 @@ map {
 	}
 } @ARGV;
 
-my($perm, $hlink, $user, $group, $size, $seconds, $file, $rel);
+ls(time());
 
-open(my $ls, '-|', "$ls_bin $ls_args @ARGV")
-	or die("Cant open $ls_bin: $!");
+# 
+sub ls {
+	my ($time) = @_;
+	my ($perm, $hlink, $user, $group, $size, $seconds, $file, $rel);
 
-while(my $line = <$ls>) {
-	next if $line =~ /^total/;
+	open(my $ls, '-|', "$ls_bin $ls_args @ARGV")
+		or die("Cant open $ls_bin: $!");
 
-	($perm, $hlink, $user, $group, $size, $seconds) = split(/\s+/, $line)
-		unless $line =~ /^\s/;
+	while (my $line = <$ls>) {
+		next if $line =~ /^total/;
 
-	($file) = $line =~ m/.* \d{6,}? (.+)/;
+		($perm, $hlink, $user, $group, $size, $seconds) = split(/\s+/, $line)
+			unless $line =~ /^\s/;
 
-	next if !$file;
+		($file) = $line =~ m/.* \d{6,}? (.+)/;
 
-	# calculate relative time
-	$rel = relative_time(time(), $seconds);
+		next if !$file;
 
-	# colorize size
-	$size = size($size);
+		# calculate relative time
+		$rel = relative_time($time, $seconds);
 
-	# colorize permissions
-	$perm = perm($perm);
+		# colorize size
+		$size = size($size);
 
-	# print it
-	&{$view}($perm, $rel, $size, $file);
+		# colorize permissions
+		$perm = perm($perm);
+
+		# print it
+		&{$view}($perm, $rel, $size, $file);
+	}
+
+	close $ls;
 }
-
-close $ls;
 
 # view: permissions and filename
 # | <perm> | <filename>
